@@ -1,0 +1,140 @@
+---
+title: "Final_code"
+output: html_document
+---
+
+
+#set up 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(stargazer)
+data_limit_new = readRDS("data_limit_new") # data is also saved as excel workbook under the name "data"
+```
+
+# table 1
+
+```{r}
+#column 1
+fit_limit = lm(Error_mean~ Classification+Complexity+Publishing_Year+ Horizon+Test_length_days_2, data_limit_new)
+stargazer(fit_limit, type = "html", out = "test.html")
+#column 2
+fit_limit_300 = lm(Error_mean~ Classification+Complexity+Publishing_Year+ Horizon+Test_length_days_2, data_limit_new %>% filter(Test_length_days_2>=300))
+#column 3
+fit_classical_300 = lm(Error_mean~Complexity+Publishing_Year+ Horizon+Test_length_days_2, data_limit_new %>% filter(Classification == "Classical", Test_length_days_2>=300))
+#column 4
+fit_ML_300 = lm(Error_mean~Complexity+Publishing_Year+ Horizon+Test_length_days_2, data_limit_new %>% filter(Classification %in% c("ML"), Test_length_days_2>=300))
+#column 5
+fit_combined_300 = lm(Error_mean~Classification+Complexity+Publishing_Year+ Horizon+Test_length_days_2, data_limit_new %>% filter(Classification %in% c( "Hybrid", "Ensemble", "Hybrid-Ensemble"), Test_length_days_2>=300))
+
+stargazer(fit_limit, fit_limit_300, fit_classical_300,fit_ML_300, fit_combined_300,  type = "html", out = "table1.html")
+```
+
+# table 2 and supplementary table 4
+
+```{r}
+fit= lm(Error_mean~Cluster_based+NWP_related+Normalization+Transform_Decomposition+Outlier+clear_sky+spatial_average+resampling+weather_forecast+regression+dim_reconstruction+ Test_length_days_2 + Horizon + Publishing_Year + Classification  , data_limit_new )
+
+stargazer(fit, type = "html", out = "techni_all.html")
+```
+
+# Figure 1: methodologies performance compare, using the long test sets, all horizons 
+
+```{r}
+# stat_box_data to count the number of observations 
+stat_box_data <- function(y) {
+  return( 
+    data.frame(
+      y =max(y),  #may need to modify this depending on your data
+      label = paste('n=', length(y), '\n')
+    )
+  )
+}
+
+#intra-hour long test set 
+data_limit_new  %>% filter(Test_length_days_2>=300,Horizon %in% c("intra-hour"))%>% ggplot(aes(Classification, Error_mean/100))+ geom_boxplot()+
+  stat_summary(
+    fun.data = stat_box_data, 
+    geom = "text", 
+    hjust = 0.5,
+    vjust = 0.5
+  )+  facet_wrap(.~`ahead-type`)  + theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                            panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("") + facet_wrap(.~Metric_2)+  scale_y_continuous(limits = c(0,0.5),labels = scales::percent_format(accuracy = 1)) +theme(text = element_text(size=14)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#intra-day long test set 
+data_limit_new  %>% filter(Test_length_days_2>=300,Horizon %in% c("intra-day"))%>% ggplot(aes(Classification, Error_mean/100))+ geom_boxplot()+
+  stat_summary(
+    fun.data = stat_box_data, 
+    geom = "text", 
+    hjust = 0.5,
+    vjust = 0.5
+  )+  facet_wrap(.~`ahead-type`)  + theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                            panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("") + facet_wrap(.~Metric_2)+  scale_y_continuous(limits = c(0,0.5),labels = scales::percent_format(accuracy = 1)) +theme(text = element_text(size=17)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# day-ahead long test sets 
+#first 4 metrics
+
+data_limit_new  %>% filter(Test_length_days_2>=300,Horizon %in% c("day-ahead"), Metric_2 %in% c("MAPE_avg", "MAPE_installed", "NMAE_avg", "NMAE_installed"))%>% ggplot(aes(Classification, Error_mean/100))+ geom_boxplot()+
+  stat_summary(
+    fun.data = stat_box_data, 
+    geom = "text", 
+    hjust = 0.5,
+    vjust = 0.5
+  )+  facet_wrap(.~`ahead-type`)  + theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                            panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("") + facet_wrap(.~Metric_2)+  scale_y_continuous(limits = c(0,0.5),labels = scales::percent_format(accuracy = 1)) +theme(text = element_text(size=17)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# second half of metrics 
+data_limit_new  %>% filter(Test_length_days_2>=300,Horizon %in% c("day-ahead"), Metric_2 %in% c("NMAE_norm", "NRMSE_avg", "NRMSE_installed","NRMSE_norm"))%>% ggplot(aes(Classification, Error_mean/100))+ geom_boxplot()+
+  stat_summary(
+    fun.data = stat_box_data, 
+    geom = "text", 
+    hjust = 0.5,
+    vjust = 0.5
+  )+  facet_wrap(.~`ahead-type`)  + theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                            panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("") + facet_wrap(.~Metric_2)+  scale_y_continuous(limits = c(0,0.5),labels = scales::percent_format(accuracy = 1)) +theme(text = element_text(size=17)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+# Figure 2
+
+```{r}
+data_limit_new %>% filter(Test_length_days_2 >=300, Metric_2 %in% c("NRMSE_installed", "NMAE_installed", "MAPE_avg","NRMSE_avg")) %>% ggplot(aes(as.factor(Complexity), Error_mean/100)) + geom_boxplot()+
+  stat_summary(
+    fun.data = stat_box_data, 
+    geom = "text", 
+    hjust = 0.5,
+    vjust = 0.5
+  ) +
+   ylab("") + xlab("") +theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                            panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("") + facet_wrap(.~Metric_2)+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))+ theme(text = element_text(size=18))
+```
+
+# Figure 4
+
+```{r}
+# panel a
+give.n <- function(x){
+  return(data.frame(y = median(x), label =paste0("n=",length(x)))) 
+  # experiment with the multiplier to find the perfect position
+}
+
+data_limit_new %>% filter(Metric_2 %in% c("NRMSE_installed", "NMAE_installed", "MAPE_avg","NRMSE_avg"), Test_length_days_2 >=300) %>% ggplot(aes(Classification, Error_mean/100, fill = Horizon)) + geom_boxplot()+stat_summary(fun.data = give.n, geom = "text", fun.y = median, 
+                   position = position_dodge(width = 0.75), hjust= 0.5,
+    vjust = -1.5) +
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                                                                                                                                                                                                                                                        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("")  + theme(axis.text.x = element_text(angle = 90, hjust = 1))  + facet_wrap(.~Metric_2)+  scale_y_continuous(limits = c(0,0.3),labels = scales::percent_format(accuracy = 1))+theme(text = element_text(size=26))
+
+# panel b
+data_limit_new %>% filter( Metric_2 %in% c("NRMSE_installed", "NMAE_installed", "MAPE_avg","NRMSE_avg")) %>% mutate(Testset = ifelse(Test_length_days_2 == 1, "1 day",  "> 1 day" )) %>% ggplot(aes(Testset, Error_mean/100, fill = Classification)) + geom_boxplot()+stat_summary(fun.data = give.n, geom = "text", fun.y = median, 
+                   position = position_dodge(width = 0.75),hjust = 0.5,
+    vjust = -2)+
+  facet_wrap(.~Metric_2)+ ylab("") + xlab("") +theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),                        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("") +  scale_y_continuous(limits = c(0,0.4),labels = scales::percent_format(accuracy = 1)) + theme(text = element_text(size=26)) 
+#panel c
+
+data_limit_new %>% filter( Metric_2 %in% c("NRMSE_installed", "NMAE_installed", "MAPE_avg","NRMSE_avg")) %>% mutate(Testset = ifelse(Test_length_days_2 == 1, "1 day",  "> 1 day" )) %>% ggplot(aes(Testset, Error_mean/100, fill = Horizon)) + geom_boxplot()+stat_summary(fun.data = give.n, geom = "text", fun.y = median,position = position_dodge(width = 0.75), hjust = 0.5,
+    vjust = -1.5) +
+  facet_wrap(.~Metric_2)+ ylab("") + xlab("") +theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + ylab("")+ xlab("") +  scale_y_continuous(limits = c(0,0.4),labels = scales::percent_format(accuracy = 1)) + theme(text = element_text(size=26))
+
+```
+
+
+
